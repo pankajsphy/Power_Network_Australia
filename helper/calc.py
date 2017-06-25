@@ -32,22 +32,33 @@ def calc_night_interval(df_cleaned):
         df_interval[key]['Day intervals'] = df_interval[key].apply(lambda x: 48 - df_interval[key]['Night intervals'])
     return df_interval
 
-def calc_consump_cost(df_consump,df_loss_peak,df_loss_off_peak,df_loss_peak_geom,consum_id):
+#Function to calculate consumption cost
+def calc_consump_cost(df_consump,x1,y1,x2,y2,consum_id):
     from helper.interpolate import cost_consump
     consump_cost = copy.deepcopy(df_consump)
-    consump_cost_geom = copy.deepcopy(df_consump)
-    pkl_path='/home/pankaj/Documents/Ashruf/data/pickles/'
     
+    for key in Years:       
+        consump_cost[key] = df_consump[key].applymap(lambda x: cost_consump(x,x1,y1,x2,y2))
+        
+    return consump_cost
+
+#Function to calculate demand capacity of charging and discharging battery
+def calc_capacity(df_cleaned,avg_consump):
+#from helper.calc import *
+    capacity = {'2010':{},'2011':{},'2012':{}}
+    df_capacity = {}
+    df_interval=calc_night_interval(df_cleaned)
+    df_vol_dschg=calc_vol_dschg(df_cleaned)
+    df_consump=calc_consump(df_cleaned)
+
     for key in Years:
-        pkl_name=pkl_path + 'cost_' + key + '_' + str(consum_id) + '.pkl'        
-#        pkl_name_2=pkl_path + 'cost_geom_' + key + '_' + str(consum_id) + '.pkl'        
+        capacity[key]=df_consump[key].sum(axis=1)
+        df_capacity[key] = pd.DataFrame({'Total Consumption' : capacity[key]})
+        df_capacity[key]['Capacity'] = df_vol_dschg[key].apply(lambda x: x - avg_consump).sum(axis=1)
+        df_capacity[key]['Demand at Night'] = df_cleaned['GC'][key].where(df_cleaned['GG'][key]==0).fillna(0).sum(axis=1)
+        df_capacity[key]['Demand at Day'] = df_cleaned['GC'][key].where(df_cleaned['GG'][key]>0).fillna(0).sum(axis=1)
+        df_capacity[key]['Periodic Demand at Night'] = df_capacity[key]['Demand at Night']/df_interval[key]['Night intervals'] 
+        df_capacity[key]['Periodic Demand at Day'] = df_capacity[key]['Demand at Day']/df_interval[key]['Day intervals']
+        df_capacity[key]=df_capacity[key].fillna(0)
         
-        consump_cost[key] = df_consump[key].applymap(lambda x: cost_consump(x,df_loss_peak,df_loss_off_peak))
-#        consump_cost_geom[key] = df_consump[key].applymap(lambda x: cost_consump(x,df_loss_peak_geom,df_loss_off_peak))
-        
-        consump_cost[key].to_pickle(pkl_path+'cost_1.pkl',compression="gzip")        
-
-#        consump_cost_geom[key].to_pickle('cost_geom_1.pkl',compression="gzip")                
-    return None
-
-
+    return df_capacity

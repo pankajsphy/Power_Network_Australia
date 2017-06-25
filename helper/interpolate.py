@@ -8,21 +8,13 @@ def interpol(xi,yi,x,order):
 #----------------------------------------------------------------------
 #Function to calculate losses corresponding to consumption
 
-def cost_consump(consump,df_peak,df_off_peak):
-    if(consump >= 0.459):
-        for i in range(0, len(df_peak)):
-            if(df_peak["Peak_Consumption"][i] > consump):
-                cost = df_peak["Loss"][i]
-                return cost        
-                break;
+def cost_consump(consump,x_OP,y_OP,x_P,y_P):
+    from helper.interpolate import interpol
 
+    if(consump >= 0.459):
+        return interpol(x_P,y_P,consump,1)
     elif(consump <= 0.309):
-        for i in range(0, len(df_off_peak)):
-            if(df_off_peak["Off_Peak_Consumption"][i] > consump):
-                cost = df_off_peak["Loss"][i]
-                return cost        
-                break;
-    
+        return interpol(x_OP,y_OP,consump,1)    
     return 0
 
-#----------------------------------------------------------------------
+
